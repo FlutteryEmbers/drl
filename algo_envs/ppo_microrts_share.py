@@ -96,13 +96,13 @@ train_config['enable_adv_norm'] = True
 train_config['enable_mini_batch'] = False 
 
 # the number of environments
-train_config['num_envs'] = 1 
+train_config['num_envs'] = 32
 
 # action space of environments
 train_config['action_shape'] = [train_envs[current_env_name].map_size, 6, 4, 4, 4, 4, 7, 49] 
 
 # whether to use GPU to training
-train_config['use_gpu'] = False 
+train_config['use_gpu'] = True 
 
 # for tensorboard naming
 train_config['tensorboard_comment'] = 'todo'
@@ -820,7 +820,7 @@ if __name__ == "__main__":
     action = torch.randn(1,8)
 
     # hyperparameters
-    MAX_VERSION = 1500
+    MAX_VERSION = 10000
     REPEAT_TIMES = 10
     for _ in range(MAX_VERSION):
         # Sampling training data and calculating time cost

@@ -16,11 +16,11 @@ redis_args_dict_local_exps = dict()
 redis_args_dict_local_exps['ip'] = '127.0.0.1' # Server ip
 redis_args_dict_local_exps['port'] = '6379' # Server port
 redis_args_dict_local_exps['db'] = '0' # Server database
-redis_args_dict_local_exps['pw'] = '123456' # Server password
+redis_args_dict_local_exps['pw'] = '' # Server password
 
 #redis parameters
 redis_args_dict_local_model = dict()
 redis_args_dict_local_model['ip'] = '127.0.0.1' # Server ip
 redis_args_dict_local_model['port'] = '6379' # Server port
 redis_args_dict_local_model['db'] = '1' # Server database
-redis_args_dict_local_model['pw'] = '123456' # Server password
+redis_args_dict_local_model['pw'] = '' # Server password

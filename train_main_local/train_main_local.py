@@ -33,7 +33,7 @@ import libs.redis_cache as redis_cache
 # Getting environment name
 def get_current_env_name():    
     #return "PPOMicroRTSHogwild"
-    #return "PPOMicroRTSShare"
+    return "PPOMicroRTSShare"
     #return "PPOMicroRTSShareGAE"
     
     #return "PPOMujocoBetaHogwild"
@@ -42,7 +42,7 @@ def get_current_env_name():
     
     #return "PPOMujocoNormalHogwild"
     #return "PPOMujocoNormalShare"
-    return "PPOMujocoNormalShareGAE"
+    #return "PPOMujocoNormalShareGAE"
 
 # Pay attention to the configuration of redis, ensure that database should not 
 # conflict at each training.
