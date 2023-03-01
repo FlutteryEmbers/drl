@@ -30,13 +30,14 @@ Example:
 """
 
 train_envs = {
+    '8_8':SimpleNamespace(**{'map_size': 8*8,'conv_linear':2*2,'map_path':'maps/8x8/basesWorkers8x8.xml','num_steps':512,'max_version':int(5e4)}),
     '10_10':SimpleNamespace(**{'map_size': 10*10,'conv_linear':3*3,'map_path':'maps/10x10/basesWorkers10x10.xml','num_steps':512,'max_version':int(5e4)}),
     '16_16':SimpleNamespace(**{'map_size': 16*16,'conv_linear':6*6,'map_path':'maps/16x16/basesWorkers16x16.xml','num_steps':512,'max_version':int(3e3)}),
     '24_24':SimpleNamespace(**{'map_size': 24*24,'conv_linear':6*6,'map_path':'maps/16x16/basesWorkers16x16.xml','num_steps':512,'max_version':int(5e4)}),
 }
 
 # current environment name
-current_env_name = '10_10'
+current_env_name = '8_8'
 
 #training parameters
 train_config = dict()
@@ -71,8 +72,8 @@ train_config['grad_norm'] = 0.5
 # minibatch size, which should divisible by an epdsode length
 train_config['mini_batch_size'] = 128 
 
-# policy gradient type: 0 is discrete, 1 is continues, 2 is mixed and 3 is mixed policy gradient loss
-train_config['pg_loss_type'] = 0 
+# policy gradient type: 0 is sub-action loss, 1 is joint action loss, 2 is mixed and 3 is mixed policy gradient loss
+train_config['pg_loss_type'] = 1 
 
 # whether clip value loss
 train_config['enable_clip_max'] = True 
@@ -107,7 +108,7 @@ train_config['use_gpu'] = True
 # for tensorboard naming
 train_config['tensorboard_comment'] = 'todo'
 
-class PPOMicroRTSShareNet(AlgoBase.AlgoBaseNet):
+class PPOMicroRTSShareConditionNet(AlgoBase.AlgoBaseNet):
     """Policy class used with PPO
 
     Example:
@@ -119,7 +120,7 @@ class PPOMicroRTSShareNet(AlgoBase.AlgoBaseNet):
     >>> distris, value = train_net(state)
     """
     def __init__(self):
-        super(PPOMicroRTSShareNet,self).__init__()
+        super(PPOMicroRTSShareConditionNet,self).__init__()
 
         self.policy_network = nn.Sequential(
             AlgoBase.layer_init(nn.Conv2d(27, 16, kernel_size=(3, 3), stride=(2, 2))),
@@ -172,8 +173,12 @@ class PPOMicroRTSShareNet(AlgoBase.AlgoBaseNet):
                 nn.ReLU(), 
                 AlgoBase.layer_init(nn.Linear(256, 1), std=1)
             )
+        
+    def get_state_z(self, states):
+        states = states.permute((0, 3, 1, 2))
+        return self.policy_network(states)
                 
-    def get_distris(self, states, prev_actions = None, index_action = None):
+    def get_distris(self, states_z,prev_actions = None, index_action = None):
         """
         Calculate the distributions of states
 
@@ -191,8 +196,7 @@ class PPOMicroRTSShareNet(AlgoBase.AlgoBaseNet):
             >>> train_net.get_distris(state)
         """
         # Moving last convolution channel shape to the second dimention 
-        states = states.permute((0, 3, 1, 2))
-        policy_network = self.policy_network(states)
+        policy_network = states_z
         if prev_actions != None:
             input_state = torch.cat((policy_network, prev_actions), dim=1)
         else:
@@ -236,8 +240,10 @@ class PPOMicroRTSShareNet(AlgoBase.AlgoBaseNet):
 
         return dist
 
-    def forward(self, states):
+    def forward(self):
         """
+        NOT WORK
+
         Calculate state values, probability distributions of each state
 
         Args:
@@ -252,9 +258,7 @@ class PPOMicroRTSShareNet(AlgoBase.AlgoBaseNet):
             >>> state = torch.randn(1,10,10,27) # one state dimention
             >>> distris, value = train_net(state)
         """
-        distris = self.get_distris(states)
-        value = self.get_value(states)
-        return distris, value
+        return None
     
     def get_value(self, states):
         """
@@ -277,10 +281,10 @@ class PPOMicroRTSShareNet(AlgoBase.AlgoBaseNet):
         states = states.permute((0, 3, 1, 2))
         return self.value(states)
     
-class PPOMicroRTSShareUtils(AlgoBase.AlgoBaseUtils):
+class PPOMicroRTSShareConditionUtils(AlgoBase.AlgoBaseUtils):
     pass
         
-class PPOMicroRTSShareAgent(AlgoBase.AlgoBaseAgent):
+class PPOMicroRTSShareConditionAgent(AlgoBase.AlgoBaseAgent):
     """
     Agent class used with PPO, allowing collect data and evaluate agents.
 
@@ -302,8 +306,8 @@ class PPOMicroRTSShareAgent(AlgoBase.AlgoBaseAgent):
 
     """
 
-    def __init__(self,sample_net:PPOMicroRTSShareNet,model_dict,is_checker=False):
-        super(PPOMicroRTSShareAgent,self).__init__()
+    def __init__(self,sample_net:PPOMicroRTSShareConditionNet,model_dict,is_checker=False):
+        super(PPOMicroRTSShareConditionAgent,self).__init__()
         self.sample_net = sample_net
         self.model_dict = model_dict
         self.num_envs = train_config['num_envs']
@@ -443,7 +447,8 @@ class PPOMicroRTSShareAgent(AlgoBase.AlgoBaseAgent):
         """
         states = torch.Tensor(states)
         distris = []
-        dist = self.sample_net.get_distris(index_action=0, states=states, prev_actions=None)
+        states_z = self.sample_net.get_state_z(states)
+        dist = self.sample_net.get_distris(index_action=0, states_z=states_z, prev_actions=None)
         
         unit_masks = torch.Tensor(unit_masks)
         dist.update_masks(unit_masks)
@@ -456,7 +461,7 @@ class PPOMicroRTSShareAgent(AlgoBase.AlgoBaseAgent):
         action_masks = torch.split(torch.Tensor(action_mask_list), self.action_shape[1:], dim=1)
 
         for i in range(1, 8):
-            dist = self.sample_net.get_distris(index_action=i, states=states, prev_actions=actions)
+            dist = self.sample_net.get_distris(index_action=i, states_z=states_z, prev_actions=actions)
             dist.update_masks(action_masks[i-1])
             action = dist.sample()
             actions = torch.cat((actions, action.unsqueeze(1)), dim=1)
@@ -513,7 +518,8 @@ class PPOMicroRTSShareAgent(AlgoBase.AlgoBaseAgent):
         '''
         states = torch.Tensor(states)
         distris = []
-        dist = self.sample_net.get_distris(index_action=0, states=states, prev_actions=None)
+        states_z = self.sample_net.get_state_z(states)
+        dist = self.sample_net.get_distris(index_action=0, states_z=states_z, prev_actions=None)
         
         unit_masks = torch.Tensor(unit_masks)
         dist.update_masks(unit_masks)
@@ -526,7 +532,7 @@ class PPOMicroRTSShareAgent(AlgoBase.AlgoBaseAgent):
         action_masks = torch.split(torch.Tensor(action_mask_list), self.action_shape[1:], dim=1)
 
         for i in range(1, 8):
-            dist = self.sample_net.get_distris(index_action=i, states=states, prev_actions=actions)
+            dist = self.sample_net.get_distris(index_action=i, states_z=states_z, prev_actions=actions)
             dist.update_masks(action_masks[i-1])
             action = dist.sample()
             actions = torch.cat((actions, action.unsqueeze(1)), dim=1)
@@ -538,7 +544,7 @@ class PPOMicroRTSShareAgent(AlgoBase.AlgoBaseAgent):
         
         return actions.T.cpu().numpy(),entropys.cpu().numpy(),log_probs.T.cpu().numpy()
     
-class PPOMicroRTSShareCalculate(AlgoBase.AlgoBaseCalculate):
+class PPOMicroRTSShareConditionCalculate(AlgoBase.AlgoBaseCalculate):
     """
     Training calss used with PPO
 
@@ -557,8 +563,8 @@ class PPOMicroRTSShareCalculate(AlgoBase.AlgoBaseCalculate):
         >>>    calculate.generate_grads()
         >>> calculate.end_batch_train()
     """
-    def __init__(self,share_model:PPOMicroRTSShareNet,model_dict,calculate_index):
-        super(PPOMicroRTSShareCalculate,self).__init__()
+    def __init__(self,share_model:PPOMicroRTSShareConditionNet,model_dict,calculate_index):
+        super(PPOMicroRTSShareConditionCalculate,self).__init__()
         self.model_dict = model_dict
         self.share_model = share_model
         
@@ -573,7 +579,7 @@ class PPOMicroRTSShareCalculate(AlgoBase.AlgoBaseCalculate):
         else:
             self.device = torch.device('cpu')
         
-        self.calculate_net = PPOMicroRTSShareNet()
+        self.calculate_net = PPOMicroRTSShareConditionNet()
         self.calculate_net.to(self.device)
         #self.calculate_net.load_state_dict(self.share_model.state_dict())
     
@@ -828,13 +834,14 @@ class PPOMicroRTSShareCalculate(AlgoBase.AlgoBaseCalculate):
         #start_time = time.time()
         action_masks = torch.split(masks, train_config['action_shape'], dim=1)
         distris = []
-        dist = self.calculate_net.get_distris(index_action=0, states=states, prev_actions=None)
+        states_z = self.calculate_net.get_state_z(states)
+        dist = self.calculate_net.get_distris(index_action=0, states_z=states_z, prev_actions=None)
         dist.update_masks(action_masks[0], device=self.device)
         distris.append(dist)
         #end_time = time.time()-start_time
         #print('forward_time:',str(end_time))
         for i in range(1, len(action_masks)):
-            dist = self.calculate_net.get_distris(index_action=i, states=states, prev_actions=actions[:i, :].T)
+            dist = self.calculate_net.get_distris(index_action=i, states_z=states_z, prev_actions=actions[:i, :].T)
             dist.update_masks(action_masks[i], device=self.device)
             distris.append(dist)
 
@@ -876,7 +883,7 @@ if __name__ == "__main__":
     writer = SummaryWriter(comment=comment)
     
     # initialize training network
-    train_net = PPOMicroRTSShareNet()
+    train_net = PPOMicroRTSShareConditionNet()
 
     # set model dictionary
     model_dict = {}
@@ -886,9 +893,9 @@ if __name__ == "__main__":
 
     # initialize a RL agent, smaple agent used for sampling training data, check agent used for evaluating 
     # and calculate used for calculating gradients
-    sample_agent = PPOMicroRTSShareAgent(train_net,model_dict,is_checker=False)
-    check_agent = PPOMicroRTSShareAgent(train_net,model_dict,is_checker=True)
-    calculate = PPOMicroRTSShareCalculate(train_net,model_dict,0)
+    sample_agent = PPOMicroRTSShareConditionAgent(train_net,model_dict,is_checker=False)
+    check_agent = PPOMicroRTSShareConditionAgent(train_net,model_dict,is_checker=True)
+    calculate = PPOMicroRTSShareConditionCalculate(train_net,model_dict,0)
 
     # dimention of a state and an action
     state = torch.randn(1,10,10,27)
