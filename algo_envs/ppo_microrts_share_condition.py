@@ -13,6 +13,7 @@ from types import SimpleNamespace
 import torch.nn.functional as F
 import torch.distributed as dist
 from torch.utils.tensorboard import SummaryWriter
+from libs import utils 
 
 """
 Environments' objects for training, including
@@ -37,7 +38,7 @@ train_envs = {
 }
 
 # current environment name
-current_env_name = '8_8'
+current_env_name = '16_16'
 
 #training parameters
 train_config = dict()
@@ -107,6 +108,11 @@ train_config['use_gpu'] = True
 
 # for tensorboard naming
 train_config['tensorboard_comment'] = 'todo'
+
+# 88, 99, 108 , 243, 328
+train_config['seed'] = 88
+
+train_config['MAX_VERSION'] = 10000
 
 class PPOMicroRTSShareConditionNet(AlgoBase.AlgoBaseNet):
     """Policy class used with PPO
@@ -878,8 +884,9 @@ class PPOMicroRTSShareConditionCalculate(AlgoBase.AlgoBaseCalculate):
             return train_config['ratio_coef']
         
 if __name__ == "__main__":
+    utils.setup_seed(train_config['seed'])
     # used for tensorboard naming
-    comment = "_PPOMicroRTSShare_Condition_" + current_env_name + "_" + train_config['tensorboard_comment']
+    comment = "_PPOMicroRTSShare_Condition_" + current_env_name + "_" + "seed_{}".format(train_config['seed']) + train_config['tensorboard_comment'] 
     writer = SummaryWriter(comment=comment)
     
     # initialize training network
@@ -902,7 +909,7 @@ if __name__ == "__main__":
     action = torch.randn(1,8)
 
     # hyperparameters
-    MAX_VERSION = 1500
+    MAX_VERSION = train_config['MAX_VERSION']
     REPEAT_TIMES = 10
     for _ in range(MAX_VERSION):
         # Sampling training data and calculating time cost
