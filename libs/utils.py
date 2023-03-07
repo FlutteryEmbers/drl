@@ -1,8 +1,9 @@
-import random
+import random, sys, re
 import numpy as np
 import torch
 import torch.nn as nn
 import os,time
+import yaml
 
 
 start_time = time.time()
@@ -85,3 +86,25 @@ def setup_seed(seed = None):
     np.random.seed(seed)
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
+
+
+def load_config(file):
+    print('loading {}'.format(file))
+    loader = yaml.SafeLoader
+    loader.add_implicit_resolver(
+        u'tag:yaml.org,2002:float',
+        re.compile(u'''^(?:
+        [-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
+        |[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)
+        |\\.[0-9_]+(?:[eE][-+][0-9]+)?
+        |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*
+        |[-+]?\\.(?:inf|Inf|INF)
+        |\\.(?:nan|NaN|NAN))$''', re.X),
+        list(u'-+0123456789.'))
+    with open(file, 'r') as stream:
+        config = yaml.load(stream, Loader=loader)
+
+    if config == None:
+        sys.exit('{} did not loaded correctly'.format(file))
+        
+    return config
