@@ -339,7 +339,9 @@ class PPOMicroRTSSharePAEConditionAgent(AlgoBase.AlgoBaseAgent):
             mean_win_rates = np.mean(self.out_comes) if len(self.out_comes)>0 else 0.0
             print(mean_win_rates)
             
+            step_record_dict['sum_rewards'] = np.sum(rewards)
             step_record_dict['mean_rewards'] = np.mean(rewards)
+            # step_record_dict['mean_entropys'] = np.mean(entropys)
             step_record_dict['mean_log_probs'] = np.mean(log_probs)
             step_record_dict['mean_win_rates'] = mean_win_rates
 
