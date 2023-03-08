@@ -1,6 +1,7 @@
 current_env_name: '16_16'
 seed: 10 # random seed
 max_version: 5000
+tensorboard_comment: 'microrts_16_16_seed_10_loss_0'
 gae_lambda: 0.95 
 gamma: 0.99 # discount factor
 clip_coef: 0.2 # policy gradient loss clip 

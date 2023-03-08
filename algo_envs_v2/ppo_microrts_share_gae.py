@@ -40,15 +40,16 @@ current_env_name = ''
 comment = ''
 
 def init():
+    file_name = 'microrts_16_16_seed_10'
     global train_config, current_env_name, comment
-    train_config = utils.load_config('assets/configs/microrts_16_16_seed_10.yaml')
+    train_config = utils.load_config('assets/configs/{}.yaml'.format(file_name))
     current_env_name = train_config['current_env_name']
     train_config['action_shape'] = [train_envs[current_env_name].map_size, 6, 4, 4, 4, 4, 7, 49]
     train_config['tensorboard_comment'] = "enable_adv_norm_true_sample_batch_16" # for tensorboard naming
     utils.setup_seed(train_config['seed'])
     # for tensorboard naming
-    train_config['tensorboard_comment'] = 'enable_adv_norm_true_sample_batch_16'
-    comment = "_PPOMicroRTSShareGAE_" + current_env_name + "_seed{}_loss{}_".format(train_config['seed'], train_config['pg_loss_type']) + train_config['tensorboard_comment']
+    train_config['tensorboard_comment'] = file_name
+    comment = "_PPOMicroRTSShareGAE_" + current_env_name  + train_config['tensorboard_comment']
 
 class PPOMicroRTSShareGAENet(AlgoBase.AlgoBaseNet):
     """Policy class used with PPO
@@ -315,6 +316,7 @@ class PPOMicroRTSShareGAEAgent(AlgoBase.AlgoBaseAgent):
         print(mean_win_rates)
         
         step_record_dict['sum_rewards'] = np.sum(rewards)
+        step_record_dict['mean_rewards'] = np.mean(rewards)
         step_record_dict['mean_entropys'] = np.mean(entropys)
         step_record_dict['mean_log_probs'] = np.mean(log_probs)
         step_record_dict['mean_win_rates'] = mean_win_rates
