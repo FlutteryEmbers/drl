@@ -14,6 +14,7 @@ import torch.nn.functional as F
 import torch.distributed as dist
 from torch.utils.tensorboard import SummaryWriter
 from libs import utils
+import argparse
 """
 Environments' objects for training, including
     map_size: observation space size map
@@ -43,16 +44,21 @@ current_env_name = ''
 comment = ''
 
 def init():
-    file_name = 'microrts_16_16_seed_10'
+    parser = argparse.ArgumentParser(description='pae')
+    parser.add_argument('--f', action="store", dest="filename")
+    args = parser.parse_args()
+    file_name = args.filename
+
     global train_config, current_env_name, comment
     train_config = utils.load_config('assets/configs/{}.yaml'.format(file_name))
     current_env_name = train_config['current_env_name']
     train_config['action_shape'] = [train_envs[current_env_name].map_size, 6, 4, 4, 4, 4, 7, 49]
     train_config['tensorboard_comment'] = "enable_adv_norm_true_sample_batch_16" # for tensorboard naming
-    # utils.setup_seed(train_config['seed'])
+    if train_config['seed'] > 0:
+        utils.setup_seed(train_config['seed'])
     # used for tensorboard naming
     train_config['tensorboard_comment'] = file_name
-    comment = "_PPOMicroRTSSharePAE_Condition_" + current_env_name  + train_config['tensorboard_comment']
+    comment = "_PPOMicroRTSSharePAE_Condition_" + train_config['tensorboard_comment']
     
 class PPOMicroRTSSharePAEConditionNet(AlgoBase.AlgoBaseNet):
     """Policy class used with PPO

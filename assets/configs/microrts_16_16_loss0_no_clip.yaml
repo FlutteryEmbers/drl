@@ -1,10 +1,10 @@
 current_env_name: '16_16'
-seed: 10 # random seed
-max_version: 5000
 tensorboard_comment: 'microrts_16_16_seed_10_loss_0'
+seed: 0 # random seed
+max_version: 5000
 gae_lambda: 0.95 
 gamma: 0.99 # discount factor
-clip_coef: 0.2 # policy gradient loss clip 
+clip_coef: 9999999 # policy gradient loss clip 
 max_clip_coef: 4 # ratio upper bound 
 ent_coef: 0.01 # weight of entropy 
 vf_coef: 1 # weight of value loss
@@ -14,7 +14,7 @@ grad_norm: 0.5 # max gradient normal of value
 mini_batch_size: 128 # minibatch size, which should divisible by an epdsode length 
 gae_length: 256 # the length of generalized advantage estimator for calculating  
 pg_loss_type: 0 # policy gradient type: 0 is discrete, 1 is continues, 2 is mixed and 3 is mixed policy gradient loss
-enable_clip_max: True # whether clip value loss 
+enable_clip_max: False # whether clip value loss 
 enable_ratio_decay: False # whether to decay ratio  
 enable_entropy_decay: False # whether to decay entropy coefficient 
 enable_lr_decay: False # whether to decay learning rate 
