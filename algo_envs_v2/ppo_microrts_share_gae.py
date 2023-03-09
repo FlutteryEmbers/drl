@@ -221,6 +221,7 @@ class PPOMicroRTSShareGAEAgent(AlgoBase.AlgoBaseAgent):
         self.num_steps = train_envs[current_env_name].num_steps
         self.action_shape = train_config['action_shape']
         self.gae_length = train_config['gae_length']
+        self.out_comes = deque( maxlen= 1000)
 
         if not is_checker:
             self.env = MicroRTSVecEnv(
@@ -244,14 +245,13 @@ class PPOMicroRTSShareGAEAgent(AlgoBase.AlgoBaseAgent):
                 reward_weight=np.array([10.0, 1.0, 1.0, 0.2, 1.0, 4.0])
             )
             self.num_steps = 1024
-            self.out_comes = deque( maxlen= 1000)
             print("PPOMicroRTSShareGAE check map is",current_env_name)
         self.obs = self.env.reset()
         
     def get_comment_info(self):
         return current_env_name + "_" + train_config['tensorboard_comment']
             
-    def sample_env(self):  
+    def sample_env(self, check=False):  
         """
         Collect training data
 
@@ -259,12 +259,23 @@ class PPOMicroRTSShareGAEAgent(AlgoBase.AlgoBaseAgent):
             >>> train_net = PPOMicroRTSShareGAENet()
             >>> sample_agent = PPOMicroRTSShareGAEAgent(train_net,model_dict,is_checker=False)
             >>> transition = sample_agent.sample_env()
-        """      
+        """
+        if check:
+           step_record_dict = dict()
+
+            rewards = []
+            log_probs = [] 
+        
         while len(self.exps_list[0]) < self.num_steps:
             unit_mask = np.array(self.env.vec_client.getUnitLocationMasks()).reshape(self.num_envs, -1)
   
             action,mask,log_prob=self.get_sample_actions(self.obs, unit_mask)
             next_obs, rs, done_n, _ = self.env.step(action)
+        
+            if check:
+                rewards.append(np.mean(rs))
+                log_probs.append(np.mean(log_prob))
+            
             for i in range(self.num_envs):
                 
                 #if done_n[i] or step == self.num_steps - 1: modified into GAE calculation
@@ -275,12 +286,30 @@ class PPOMicroRTSShareGAEAgent(AlgoBase.AlgoBaseAgent):
                 
                 self.exps_list[i].append([self.obs[i],action[i],rs[i],mask[i],done,log_prob[i],self.model_dict['train_version']])
                 
+                if check:
+                    if done_n[i]:
+                        if infos[i]['raw_rewards'][0] > 0:
+                            self.out_comes.append(1.0)
+                        else:
+                            self.out_comes.append(0.0)
+                
             self.obs=next_obs
         
         # Starting training
         train_exps = self.exps_list
         # Deleting the length before gae length
         self.exps_list = [ exps[self.gae_length:self.num_steps] for exps in self.exps_list ]
+        
+        if check:
+            mean_win_rates = np.mean(self.out_comes) if len(self.out_comes)>0 else 0.0
+            print(mean_win_rates)
+
+            step_record_dict['sum_rewards'] = np.sum(rewards)
+            step_record_dict['mean_rewards'] = np.mean(rewards)
+            step_record_dict['mean_log_probs'] = np.mean(log_probs)
+            step_record_dict['mean_win_rates'] = mean_win_rates
+            return train_exps, step_record_dict
+        
         return train_exps
 
     def check_env(self):
@@ -803,7 +832,13 @@ if __name__ == "__main__":
     for _ in range(MAX_VERSION):
         # Sampling training data and calculating time cost
         start_time = time.time()
-        samples_list = sample_agent.sample_env()
+        samples_list,infos = sample_agent.sample_env(check=True)
+        
+        for (key,value) in  infos.items():
+            writer.add_scalar(key, value, model_dict[0])
+            
+        print("version:",model_dict[0],"mean_rewards:",infos['mean_rewards'])
+        
         end_time = time.time()-start_time
         print('sample_time:',end_time)
         samples = []
@@ -824,9 +859,3 @@ if __name__ == "__main__":
         model_dict[0] = model_dict[0] + 1
         model_dict['train_version'] = model_dict[0]
         
-        # Evaluating agent
-        infos = check_agent.check_env()
-        for (key,value) in  infos.items():
-            writer.add_scalar(key, value, model_dict[0])
-            
-        print("version:",model_dict[0],"sum_rewards:",infos['sum_rewards'])
