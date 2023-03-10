@@ -1,5 +1,5 @@
 current_env_name: '10_10'
-tensorboard_comment: 'microrts_10_10_seed_0_loss_0'
+tensorboard_comment: 'microrts_10_10_seed_0'
 seed: 0 # random seed
 max_version: 5000
 gae_lambda: 0.95 
@@ -21,5 +21,5 @@ enable_lr_decay: False # whether to decay learning rate
 enable_grad_norm: False # whether to clip gradient norm 
 enable_adv_norm: True # whether to normalize advantage function 
 enable_mini_batch: False # whether to use mini batch 
-num_envs: 64 # the number of environments 
+num_envs: 16 # the number of environments 
 use_gpu: True # whether to use GPU to training
