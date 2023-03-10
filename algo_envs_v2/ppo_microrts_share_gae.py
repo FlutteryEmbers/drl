@@ -274,7 +274,7 @@ class PPOMicroRTSShareGAEAgent(AlgoBase.AlgoBaseAgent):
             unit_mask = np.array(self.env.vec_client.getUnitLocationMasks()).reshape(self.num_envs, -1)
   
             action,mask,log_prob=self.get_sample_actions(self.obs, unit_mask)
-            next_obs, rs, done_n, _ = self.env.step(action)
+            next_obs, rs, done_n, infos = self.env.step(action)
         
             if check:
                 rewards.append(np.mean(rs))
