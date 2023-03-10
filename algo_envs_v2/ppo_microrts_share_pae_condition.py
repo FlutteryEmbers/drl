@@ -46,6 +46,7 @@ comment = ''
 def init():
     parser = argparse.ArgumentParser(description='pae')
     parser.add_argument('--f', action="store", dest="filename")
+    parser.add_argument('--cuda', type=int, default=0)
     args = parser.parse_args()
     file_name = args.filename
 
@@ -53,10 +54,13 @@ def init():
     train_config = utils.load_config('assets/configs/{}.yaml'.format(file_name))
     current_env_name = train_config['current_env_name']
     train_config['action_shape'] = [train_envs[current_env_name].map_size, 6, 4, 4, 4, 4, 7, 49]
-    train_config['tensorboard_comment'] = "enable_adv_norm_true_sample_batch_16" # for tensorboard naming
+
+    train_config['cuda'] = args.cuda
     if train_config['seed'] > 0:
         utils.setup_seed(train_config['seed'])
     # used for tensorboard naming
+    if file_name != train_config['tensorboard_comment']:
+        sys.exit("Wrong Comments!!!")
     train_config['tensorboard_comment'] = file_name
     comment = "_PPOMicroRTSSharePAE_Condition_" + train_config['tensorboard_comment']
     
@@ -890,7 +894,7 @@ if __name__ == "__main__":
     # and calculate used for calculating gradients
     sample_agent = PPOMicroRTSSharePAEConditionAgent(train_net,model_dict,is_checker=False)
     check_agent = PPOMicroRTSSharePAEConditionAgent(train_net,model_dict,is_checker=True)
-    calculate = PPOMicroRTSSharePAEConditionCalculate(train_net,model_dict,0)
+    calculate = PPOMicroRTSSharePAEConditionCalculate(train_net,model_dict, train_config['cuda'])
 
     # hyperparameters
     MAX_VERSION = train_config['max_version']
