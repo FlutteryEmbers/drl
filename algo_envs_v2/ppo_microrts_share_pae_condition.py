@@ -554,7 +554,7 @@ class PPOMicroRTSSharePAEConditionCalculate(AlgoBase.AlgoBaseCalculate):
         if train_config['use_gpu'] and torch.cuda.is_available():
             device_count = torch.cuda.device_count()
             device_index = self.calculate_index % device_count
-            self.device = torch.device('cuda',device_index)
+            self.device = torch.device('cuda', train_config['cuda'])
         else:
             self.device = torch.device('cpu')
         
@@ -894,7 +894,7 @@ if __name__ == "__main__":
     # and calculate used for calculating gradients
     sample_agent = PPOMicroRTSSharePAEConditionAgent(train_net,model_dict,is_checker=False)
     check_agent = PPOMicroRTSSharePAEConditionAgent(train_net,model_dict,is_checker=True)
-    calculate = PPOMicroRTSSharePAEConditionCalculate(train_net,model_dict, train_config['cuda'])
+    calculate = PPOMicroRTSSharePAEConditionCalculate(train_net,model_dict, 0)
 
     # hyperparameters
     MAX_VERSION = train_config['max_version']
