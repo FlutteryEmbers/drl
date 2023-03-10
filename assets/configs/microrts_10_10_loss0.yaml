@@ -1,5 +1,5 @@
 current_env_name: '10_10'
-tensorboard_comment: 'microrts_10_10_seed_0'
+tensorboard_comment: 'microrts_10_10_loss0'
 seed: 0 # random seed
 max_version: 5000
 gae_lambda: 0.95 
